@@ -1,18 +1,21 @@
-import upload from "../config/multer";
+import upload from "../config/multer.js";
+import multer from 'multer';
 const uploadMiddleware = (req, res, next) => {
-    upload(req, res, (err) => {
-      if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(400).json({ error: 'File size exceeds the 5MB limit!' });
-        }
-        if (err.code === 'LIMIT_FILE_COUNT') {
-          return res.status(400).json({ error: 'Maximum 10 files are allowed!' });
-        }
-      } else if (err) {
-        return res.status(400).json({ error: err.message });
-      }
-      next();
-    });
-  };
-  
-  export default uploadMiddleware;
+  upload(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ error: err.message });
+    } else if (err) {
+      console.error('Upload error:', err);
+      return res.status(400).json({ error: err.message });
+    }
+    if (!req.files || req.files.length === 0) {
+      return next();
+    }
+    if (req.files.length < 1) {
+      return res.status(400).json({ message: 'At least 1 image is required for update.' });
+    }
+    next();
+  });
+};
+
+export default uploadMiddleware;

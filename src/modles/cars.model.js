@@ -1,6 +1,11 @@
 import mongoose from 'mongoose';
 
 const carSchema = new mongoose.Schema({
+  addedby:{
+    type:mongoose.Schema.Types.ObjectId,
+    ref:'User',
+    required:true,
+  },
   title: {
     type: String,
     required: true,
@@ -20,13 +25,13 @@ const carSchema = new mongoose.Schema({
       type: String,
       required: true,
     },
-    company: {
-      type: String,
-      required: true,
-    },
   },
   yearOfManufacture: {
     type: Number,
+    required: true,
+  },
+  company: {
+    type: String,
     required: true,
   },
   driveType: {

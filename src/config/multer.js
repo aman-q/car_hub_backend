@@ -2,14 +2,10 @@ import multer from 'multer';
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-  if (
-    file.mimetype === 'image/jpeg' ||
-    file.mimetype === 'image/jpg' ||
-    file.mimetype === 'image/png'
-  ) {
+  if (['image/jpeg', 'image/jpg', 'image/png'].includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type! Only JPEG, JPG, and PNG images are allowed.'), false);
+    cb(new Error(`Invalid file type: ${file.mimetype}. Only JPEG, JPG, and PNG are allowed.`), false);
   }
 };
 
