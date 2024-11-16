@@ -23,11 +23,11 @@ const carSchema = new mongoose.Schema({
   tags: {
     car_type: {
       type: String,
-      required: true,
+      // required: true,
     },
   },
   yearOfManufacture: {
-    type: Number,
+    type: String,
     required: true,
   },
   company: {
