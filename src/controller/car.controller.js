@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import Car from '../modles/cars.model.js';
-import {uploadMultipleImagesToCloudflare} from '../config/cloudflareStorage.js'
+import {uploadMultipleImagesToCloudinary} from '../config/cloudnaryStorage.js'
 
 
 export const getallcars = async (req,res)=>{
@@ -21,20 +21,19 @@ export const addcar = async(req,res)=>{
     const id=req.user;
     const { title, description, yearOfManufacture, driveType, company } = req.body;
 
-    const tags = {
-      car_type: req.body['tags.car_type'],
-    };
+    // const tags = {
+    //   car_type: req.body['tags.car_type'],
+    // };
 
     // Check if files are uploaded
     if (!req.files || req.files.length < 3) {
       return res.status(400).json({ message: 'At least 3 images are required.' });
     }
 
-    // Debug uploaded files
-    console.log('Uploaded files:', req.files);
-
     // Upload files to Cloudflare
-    const photoUrls = await uploadMultipleImagesToCloudflare(req.files, 'collection/');
+    
+    const folderName = `/collection/images/`;
+    const photoUrls = await uploadMultipleImagesToCloudinary(req.files, folderName);
 
     // Create new Car entry
     const newCar = new Car({
@@ -42,7 +41,7 @@ export const addcar = async(req,res)=>{
       title,
       description,
       images: photoUrls,
-      tags,
+     // tags,
       yearOfManufacture: parseInt(yearOfManufacture, 10),
       company,
       driveType,
