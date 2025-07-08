@@ -12,7 +12,7 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization'], 
 }));
 app.get('/',(req,res)=>{
-    res.send("Spyne.ai Task Backend is Running");
+    res.send("Spyne.ai Backend is Running");
 });
 
 
