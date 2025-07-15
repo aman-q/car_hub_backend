@@ -1,12 +1,13 @@
 import express from 'express';
 import { login, register ,verifyOtp ,resendOtpController } from '../controller/user.controller.js';
-import { rateLimiter } from "../middlewares/rateLimiter.js";
+import { otpRateLimiter, loginRateLimiter, registerRateLimiter } from "../middleware/rateLimiter.js";
+
 
 const userRouter= express.Router();
 
-userRouter.post("/login",login);
-userRouter.post("/register",register);
-router.post("/verify-otp", verifyOtp);
-router.post("/resend-otp",rateLimiter("otp:", 3, 60) ,resendOtpController);
+userRouter.post("/login",loginRateLimiter,login);
+userRouter.post("/register",registerRateLimiter,register);
+userRouter.post("/verify-otp", verifyOtp);
+userRouter.post("/resend-otp", otpRateLimiter, resendOtpController);
 
 export default userRouter;
