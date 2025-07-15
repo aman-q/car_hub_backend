@@ -10,5 +10,14 @@ export const MESSAGES = {
     SERVER_ERROR: "Something went wrong on the server",
     NO_FIELDS_UPDATE: "No fields to update",
     AT_LEAST_THREE_IMAGES: "At least 3 images are required.",
+    USER_ALREADY_EXISTS: "User with this email or phone number already exists",
+    USER_REGISTER_SUCCESS: "User registered successfully. Please verify your email using the OTP sent.",
+    SERVER_ERROR: "Something went wrong on the server",
+    OTP_VERIFIED_SUCCESS: "Email verified successfully!",
+    USER_NOT_FOUND: "User not found",
+    EMAIL_ALREADY_VERIFIED: "Email is already verified",
+    INVALID_OTP: "Invalid OTP",
+    OTP_EXPIRED: "OTP has expired. Please request a new one",
+    OTP_RESENT_SUCCESS: "OTP resent successfully. Please check your email.",
   };
   
