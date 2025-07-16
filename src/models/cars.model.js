@@ -39,6 +39,10 @@ const carSchema = new mongoose.Schema({
     enum: ['LWD', 'RWD'],
     required: true,
   },
+  price:{
+    type: Number,
+    required: true,
+  },
 });
 
 const Car = mongoose.model('Car', carSchema);

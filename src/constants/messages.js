@@ -1,6 +1,6 @@
 export const MESSAGES = {
     CARS_FETCH_SUCCESS: "Cars retrieved successfully",
-    CARS_NOT_FOUND: "No cars found",
+    CARS_NOT_FOUND: "No car found",
     CAR_ADD_SUCCESS: "Car added successfully!",
     CAR_DELETE_SUCCESS: "Car deleted successfully",
     CAR_UPDATE_SUCCESS: "Car updated successfully",
@@ -19,5 +19,6 @@ export const MESSAGES = {
     INVALID_OTP: "Invalid OTP",
     OTP_EXPIRED: "OTP has expired. Please request a new one",
     OTP_RESENT_SUCCESS: "OTP resent successfully. Please check your email.",
+    BOOKING_SUCCESS: "Booking created successfully.",
   };
   

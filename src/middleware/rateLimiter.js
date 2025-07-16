@@ -33,7 +33,7 @@ export const rateLimiter = (keyPrefix = "rl:", limit = 5, windowSec = 60, custom
       res.set("X-RateLimit-Reset", ttl);
 
       if (current > limit) {
-        // ✅ Log abuse to MongoDB
+        //  Log abuse to MongoDB
         await AbuseLog.create({
           ip_address: req.ip,
           route: req.originalUrl,
