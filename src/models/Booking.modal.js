@@ -40,10 +40,21 @@ const bookingSchema = new mongoose.Schema({
     required: true,
   },
   extras: {
-    type: Object, // Optional: GPS, child seat, etc.
+    type: Object, // Optional: GPS, babySeat, etc.
     default: {},
   },
-}, { timestamps: true });
+  isDeleted: {
+    type: Boolean,
+    default: false,
+  },
+}, {
+  timestamps: true,
+});
+
+// 🔁 Static method to soft delete a booking
+bookingSchema.statics.softDelete = async function (bookingId) {
+  return this.findByIdAndUpdate(bookingId, { isDeleted: true });
+};
 
 const Booking = mongoose.model('Booking', bookingSchema);
 export default Booking;
