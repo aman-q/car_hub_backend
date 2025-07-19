@@ -21,6 +21,10 @@ export const login = async (req, res) => {
         if (!passwordMatch) {
             return res.status(400).json({ messaage: "Inavlid credential!" });
         }
+        // Check if user is verified
+        if (!user.isEmailVerified) {
+            return res.status(403).json({ message: "Please verify your email first!" });
+        }
         // Generate JWT token
         const token = generateToken(user);
         res.status(200).json({
@@ -68,7 +72,6 @@ export const register = async (req, res) => {
 export const verifyOtp = async (req, res) => {
   try {
     const user = await verifyUserOtp(req.body);
-
     return sendSuccess(
       res,
       MESSAGES.OTP_VERIFIED_SUCCESS,

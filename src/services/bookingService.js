@@ -1,9 +1,12 @@
 import Booking from "../models/Booking.modal.js";
 import Car from "../models/cars.model.js";
-import { publishBookingEvent } from "../queues/bookingQueue.js";
+import User from "../models/user.model.js";
+// import { publishBookingEvent } from "../queues/bookingQueue.js";
 import { MESSAGES } from "../constants/messages.js";
 import { STATUS_CODES } from "../constants/statusCodes.js";
 import logger from "../utils/logger.js";
+import { sendEmail } from "../config/email.js";
+import { bookingConfirmationTemplate } from "../utils/emailTemplates.js"; // ✅ use template
 
 export const createBookingService = async (userId, data) => {
   const {
@@ -12,11 +15,10 @@ export const createBookingService = async (userId, data) => {
     endDate,
     pickupLocation,
     dropoffLocation,
-    extras = {}
+    extras = {},
   } = data;
 
   try {
-    // 1. Validate car exists
     const car = await Car.findById(carId);
     if (!car) {
       logger.warn(`Car not found: ${carId}`);
@@ -25,7 +27,6 @@ export const createBookingService = async (userId, data) => {
       throw error;
     }
 
-    // 2. Validate dates
     const start = new Date(startDate);
     const end = new Date(endDate);
     if (isNaN(start) || isNaN(end) || end <= start) {
@@ -35,13 +36,10 @@ export const createBookingService = async (userId, data) => {
       throw error;
     }
 
-    // 3. Check car availability (respect soft-deleted bookings)
     const overlappingBooking = await Booking.findOne({
       car: carId,
       isDeleted: false,
-      $or: [
-        { startDate: { $lte: end }, endDate: { $gte: start } }
-      ]
+      $or: [{ startDate: { $lte: end }, endDate: { $gte: start } }],
     });
 
     if (overlappingBooking) {
@@ -50,8 +48,7 @@ export const createBookingService = async (userId, data) => {
       throw error;
     }
 
-    // 4. Price from Car model
-    if (!car.pricePerDay) {
+    if (!car.price) {
       logger.error(`Car ${carId} missing pricePerDay field`);
       const error = new Error("Car does not have pricing info");
       error.statusCode = STATUS_CODES.SERVER_ERROR;
@@ -59,11 +56,10 @@ export const createBookingService = async (userId, data) => {
     }
 
     const durationDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-    const basePrice = durationDays * car.pricePerDay;
+    const basePrice = durationDays * car.price;
 
-    // 5. Extras pricing
     let extrasCost = 0;
-    const allowedExtras = ['gps', 'babySeat'];
+    const allowedExtras = ["gps", "babySeat"];
     for (const key in extras) {
       if (!allowedExtras.includes(key)) {
         const error = new Error(`Invalid extra option: ${key}`);
@@ -76,7 +72,6 @@ export const createBookingService = async (userId, data) => {
 
     const totalPrice = basePrice + extrasCost;
 
-    // 6. Create booking
     const booking = await Booking.create({
       user: userId,
       car: carId,
@@ -90,13 +85,21 @@ export const createBookingService = async (userId, data) => {
 
     logger.info(`Booking created: ${booking._id}`);
 
-    // 7. Publish to RabbitMQ
-    await publishBookingEvent(booking);
+    // ✅ Fetch user & send email
+    const user = await User.findById(userId);
+
+    if (user?.email) {
+      const html = bookingConfirmationTemplate(user, car, booking);
+      await sendEmail( "🚗 Your Booking Confirmation",user.email ,html);
+      logger.info(`Confirmation email sent to ${user.email}`);
+    }
+
+    // await publishBookingEvent(booking);
 
     return booking;
 
   } catch (error) {
     logger.error("Booking creation failed:", error);
-    throw error; // Will be handled in controller
+    throw error;
   }
 };
