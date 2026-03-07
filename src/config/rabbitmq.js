@@ -7,7 +7,7 @@
 //   try {
 //     const connection = await amqp.connect(process.env.RABBITMQ_URL || 'amqp://localhost');
 //     channel = await connection.createChannel();
-//     logger.info('🐇 Connected to RabbitMQ');
+//     logger.info(' Connected to RabbitMQ');
 //   } catch (error) {
 //     logger.error('❌ Failed to connect to RabbitMQ:', error);
 //     throw error;

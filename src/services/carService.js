@@ -10,18 +10,16 @@ export const getCars = async (page, limit) => {
 
   const totalCars = await Car.countDocuments();
 
-  const cars = await Car.find()
-    .populate("addedby", "fname lname email")
+  const cars = await Car.find(
+    {},
+    "_id title price images company yearOfManufacture driveType description" 
+  )
     .skip(skip)
-    .limit(limit);
-
+    .limit(limit)
+    .lean(); 
   const totalPages = Math.ceil(totalCars / limit);
 
-  return {
-    cars,
-    totalPages,
-    totalCars,
-  };
+  return { cars, totalPages, totalCars };
 };
 
 /**

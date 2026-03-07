@@ -155,7 +155,7 @@ export const bookingConfirmationTemplate = (user, car, booking) => {
                             ${car.title}
                         </h3>
                         <div style="background: #667eea; color: #ffffff; padding: 8px 20px; border-radius: 25px; display: inline-block; font-size: 14px; font-weight: 600;">
-                              Booking ID: #${booking._id.slice(-8).toUpperCase()}
+                              Booking ID: #${booking._id.toString().slice(-8).toUpperCase()}
                         </div>
                     </div>
                     
