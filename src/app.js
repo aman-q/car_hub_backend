@@ -28,6 +28,14 @@ app.use(globalRateLimiter);
 app.get("/", (req, res) => {
   res.send("Spyne.ai Backend is Running");
 });
+app.get('/test-smtp', async (req, res) => {
+  try {
+    await transporter.verify();
+    res.json({ status: 'SMTP OK' });
+  } catch (err) {
+    res.json({ error: err.message, code: err.code });
+  }
+});
 
 
 
