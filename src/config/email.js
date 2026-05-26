@@ -1,38 +1,23 @@
-import nodemailer from "nodemailer";
-import dotenv from "dotenv";
-import logger from "../utils/logger.js";
+import { BrevoClient } from '@getbrevo/brevo';
+import dotenv from 'dotenv';
+import logger from '../utils/logger.js';
 
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: Number(process.env.EMAIL_PORT),
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
-  },
-  secure: process.env.EMAIL_PORT === "465", // true for 465 (SSL), false for 587 (TLS)
-  requireTLS: true,
-  tls: {
-    rejectUnauthorized: false,
-  },
-});
+const brevo = new BrevoClient({ apiKey: process.env.BREVO_API_KEY });
 
 export const sendEmail = async (subject, recipientEmail, body) => {
   try {
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: recipientEmail,
+    const data = await brevo.transactionalEmails.sendTransacEmail({
       subject,
-      html: body,
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    logger.info("Email sent successfully:", info.messageId);
-    return info;
+      htmlContent: body,
+      sender: { name: 'CarHub', email: 'aman14jsr@gmail.com' },
+      to: [{ email: recipientEmail }],
+    });
+    logger.info('Email sent successfully:', data.messageId);
+    return data;
   } catch (error) {
-    logger.error("Error sending email:", error);
+    logger.error('Error sending email:', error);
     throw error;
   }
 };
-
