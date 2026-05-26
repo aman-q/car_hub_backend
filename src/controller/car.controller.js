@@ -2,14 +2,15 @@ import { getCars, addCarService, removeCarService ,updateCarService,getUserCarsS
 import { MESSAGES } from "../constants/messages.js";
 import { STATUS_CODES } from "../constants/statusCodes.js";
 import { sendSuccess, sendError } from "../helpers/responseHelper.js";
+import logger from "../utils/logger.js";
 
 export const getallcars = async (req, res) => {
   try {
-    let { page = 1, limit = 10 } = req.query;
+    let { page = 1, limit = 10, startDate, endDate } = req.query;
     page = parseInt(page, 10);
     limit = parseInt(limit, 10);
 
-    const { cars, totalPages, totalCars } = await getCars(page, limit);
+    const { cars, totalPages, totalCars } = await getCars(page, limit, startDate, endDate);
 
     if (!cars || cars.length === 0) {
       return sendError(res, MESSAGES.CARS_NOT_FOUND, null, STATUS_CODES.NOT_FOUND);
@@ -45,11 +46,11 @@ export const removecar = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const car = await removeCarService(id);
+    const car = await removeCarService(req.user, id);
 
     return sendSuccess(res, MESSAGES.CAR_DELETE_SUCCESS, { car }, STATUS_CODES.OK);
   } catch (error) {
-    console.logger("Error removing car:", error);
+    logger.error("Error removing car:", error);
     const statusCode = error.statusCode || STATUS_CODES.SERVER_ERROR;
     return sendError(res, error.message || MESSAGES.SERVER_ERROR, error.message, statusCode);
   }
@@ -59,7 +60,7 @@ export const updateCar = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const updatedCar = await updateCarService(id, req.body, req.files);
+    const updatedCar = await updateCarService(req.user, id, req.body, req.files);
 
     return sendSuccess(res, MESSAGES.CAR_UPDATE_SUCCESS, { car: updatedCar }, STATUS_CODES.OK);
   } catch (error) {
@@ -90,13 +91,16 @@ export const singlecardeatil = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const car = await getCarDetailService(id);
+    const result = await getCarDetailService(id);
 
-    if (!car) {
-      return sendError(res, MESSAGES.CAR_NOT_FOUND, null, STATUS_CODES.NOT_FOUND);
+    if (!result) {
+      return sendError(res, MESSAGES.CARS_NOT_FOUND, null, STATUS_CODES.NOT_FOUND);
     }
 
-    return sendSuccess(res, MESSAGES.CAR_DETAIL_SUCCESS, { car }, STATUS_CODES.OK);
+    return sendSuccess(res, MESSAGES.CAR_DETAIL_SUCCESS, {
+      car: result.car,
+      availability: result.availability,
+    }, STATUS_CODES.OK);
   } catch (error) {
     logger.error("Error fetching car detail:", error);
     return sendError(res, MESSAGES.SERVER_ERROR, error.message, STATUS_CODES.SERVER_ERROR);

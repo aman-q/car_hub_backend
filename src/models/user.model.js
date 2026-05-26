@@ -33,6 +33,14 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  refreshToken: {
+    type: String,
+    default: null,
+  },
+  refreshTokenExpiry: {
+    type: Date,
+    default: null,
+  },
 }, { timestamps: true });
 
 const User = mongoose.model("User", userSchema);

@@ -1,271 +1,413 @@
+// ─── date helpers ─────────────────────────────────────────────────────────────
+
+const fmtShort = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const fmtYear  = (d) => new Date(d).getFullYear();
+const fmtFull  = (d) => new Date(d).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+// ─── shared CSS injected into every template ──────────────────────────────────
+
+const css = `
+<style>
+  body,table,td,p,a,h1,h2,span { -webkit-text-size-adjust:100%;-ms-text-size-adjust:100%; }
+  table,td { border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt; }
+  @media only screen and (max-width:620px) {
+    .card        { width:100% !important;border-radius:0 !important; }
+    .outer       { padding:0 !important; }
+    .hero        { padding:36px 24px 32px !important; }
+    .body-pad    { padding:32px 24px !important; }
+    .footer-pad  { padding:24px !important; }
+    .h1          { font-size:24px !important;line-height:1.25 !important; }
+    .ticket-l    { display:block !important;width:100% !important;border-right:none !important;border-bottom:1px dashed #D1D5DB !important;padding-right:0 !important; }
+    .ticket-r    { display:block !important;width:100% !important;padding-left:0 !important;padding-top:20px !important; }
+    .otp-cell    { width:40px !important;height:52px !important;font-size:24px !important;border-radius:8px !important; }
+    .otp-gap     { width:6px !important; }
+    .btn         { width:100% !important;display:block !important;text-align:center !important;box-sizing:border-box !important; }
+    .fl          { display:block !important;margin:5px 0 !important; }
+    .row-label   { font-size:11px !important; }
+    .row-value   { font-size:13px !important; }
+  }
+</style>`;
+
+// ─── structural helpers ───────────────────────────────────────────────────────
+
+// Dark SPYNE brand bar at the very top
+const brandBar = `
+<tr>
+  <td align="left" style="background:#0F172A;padding:18px 40px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td>
+          <span style="font-size:18px;font-weight:700;color:#FFFFFF;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">SPYNE</span>
+          <span style="font-size:12px;color:#64748B;margin-left:10px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">Premium Car Rentals</span>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>`;
+
+// Coloured hero: icon + heading + subtitle + optional badge
+const hero = (color, iconEmoji, heading, subtitle, badge = '') => `
+<tr>
+  <td class="hero" align="center" style="background:${color};padding:48px 40px 40px;">
+    <div style="width:72px;height:72px;border-radius:36px;background:rgba(255,255,255,0.18);margin:0 auto 20px;font-size:32px;line-height:72px;text-align:center;">
+      ${iconEmoji}
+    </div>
+    <h1 class="h1" style="margin:0 0 8px;font-size:28px;font-weight:700;color:#FFFFFF;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;line-height:1.2;">${heading}</h1>
+    <p style="margin:0;font-size:15px;color:rgba(255,255,255,0.82);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${subtitle}</p>
+    ${badge ? `<div style="display:inline-block;margin-top:16px;padding:5px 14px;border-radius:20px;background:rgba(255,255,255,0.2);font-size:12px;font-weight:600;color:#FFFFFF;letter-spacing:1px;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${badge}</div>` : ''}
+  </td>
+</tr>`;
+
+// Single detail row inside a card
+const row = (label, value, isLast = false) => `
+<tr>
+  <td style="padding:13px 0;${isLast ? '' : 'border-bottom:1px solid #F1F5F9;'}">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td class="row-label" valign="top" style="width:130px;padding-right:16px;font-size:12px;font-weight:500;color:#94A3B8;text-transform:uppercase;letter-spacing:0.8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;white-space:nowrap;">${label}</td>
+        <td class="row-value" style="font-size:14px;font-weight:600;color:#0F172A;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${value}</td>
+      </tr>
+    </table>
+  </td>
+</tr>`;
+
+// CTA button (table-based for Outlook compat)
+const ctaButton = (label, color) => `
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:32px auto 0;">
+  <tr>
+    <td align="center" bgcolor="${color}" style="border-radius:8px;background:${color};">
+      <a href="#" class="btn" style="display:inline-block;padding:14px 40px;color:#FFFFFF;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;background:${color};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;letter-spacing:-0.1px;">
+        ${label}
+      </a>
+    </td>
+  </tr>
+</table>`;
+
+// Section card wrapper
+const card = (sectionTitle, inner) => `
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;margin-bottom:24px;">
+  <tr>
+    <td style="background:#F8FAFC;padding:12px 20px;border-bottom:1px solid #E2E8F0;">
+      <span style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:1.2px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${sectionTitle}</span>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:2px 20px 8px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        ${inner}
+      </table>
+    </td>
+  </tr>
+</table>`;
+
+// Callout box (amber warning, green tip, etc.)
+const callout = (bgColor, borderColor, textColor, html) => `
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
+  <tr>
+    <td style="background:${bgColor};border-left:3px solid ${borderColor};border-radius:6px;padding:14px 16px;">
+      <p style="margin:0;font-size:13px;color:${textColor};line-height:1.65;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${html}</p>
+    </td>
+  </tr>
+</table>`;
+
+// Footer
+const footer = (links) => `
+<tr>
+  <td class="footer-pad" align="center" style="background:#F8FAFC;padding:28px 40px;border-top:1px solid #E2E8F0;">
+    <p style="margin:0 0 12px;font-size:13px;color:#94A3B8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+      ${links}
+    </p>
+    <p style="margin:0;font-size:12px;color:#CBD5E1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+      © 2025 SPYNE Technologies. All rights reserved.
+    </p>
+  </td>
+</tr>`;
+
+// Base HTML document wrapper
+const document = (title, bodyContent) => `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>${title}</title>
+  ${css}
+</head>
+<body style="margin:0;padding:0;background-color:#F1F5F9;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F1F5F9;">
+    <tr>
+      <td class="outer" align="center" style="padding:40px 16px;">
+        <table role="presentation" class="card" cellpadding="0" cellspacing="0" border="0"
+               style="max-width:600px;width:100%;background:#FFFFFF;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(15,23,42,0.08);">
+          ${bodyContent}
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+// ─── 1. OTP Verification ──────────────────────────────────────────────────────
+
 export const otpVerificationTemplate = (name, otp) => {
-  return `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Verify Your Email - SPYNE</title>
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        </style>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);">
-            
-            <!-- Header with gradient -->
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 50px 40px; text-align: center; position: relative;">
-                <div style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 15px; padding: 30px; margin: 0 auto; max-width: 300px;">
-                    <div style="width: 60px; height: 60px; background: #ffffff; border-radius: 15px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);">
-                        <span style="font-size: 28px;">🔐</span>
-                    </div>
-                    <h1 style="color: #ffffff; margin: 0; font-size: 36px; font-weight: 700; letter-spacing: -1px;">
-                        SPYNE
-                    </h1>
-                    <p style="color: rgba(255, 255, 255, 0.8); margin: 8px 0 0 0; font-size: 16px; font-weight: 500;">
-                        Premium Car Rentals
-                    </p>
-                </div>
-            </div>
-            
-            <!-- Content -->
-            <div style="padding: 50px 40px;">
-                <div style="text-align: center; margin-bottom: 40px;">
-                    <h2 style="color: #1a202c; margin: 0 0 16px 0; font-size: 32px; font-weight: 700; line-height: 1.2;">
-                        Verify Your Email
-                    </h2>
-                    <p style="color: #718096; margin: 0; font-size: 18px; line-height: 1.6;">
-                        Hi <strong style="color: #2d3748;">${name}</strong>, we're excited to have you on board! Please verify your email address to get started.
-                    </p>
-                </div>
-                
-                <!-- OTP Code -->
-                <div style="background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); border-radius: 20px; padding: 40px 30px; text-align: center; margin: 40px 0; border: 1px solid #e2e8f0;">
-                    <p style="color: #4a5568; margin: 0 0 20px 0; font-size: 16px; font-weight: 500;">
-                        Your verification code
-                    </p>
-                    <div style="background: #ffffff; border-radius: 15px; padding: 25px; margin: 0 auto; display: inline-block; border: 2px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);">
-                        <span style="font-size: 42px; font-weight: 800; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: 12px; font-family: 'Courier New', monospace;">
-                            ${otp}
-                        </span>
-                    </div>
-                    <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 10px; border-left: 4px solid #ffc107;">
-                        <p style="color: #856404; margin: 0; font-size: 14px; font-weight: 500;">
-                            ⏰ This code expires in 10 minutes
-                        </p>
-                    </div>
-                </div>
-                
-                <!-- Action buttons -->
-                <div style="text-align: center; margin: 40px 0;">
-                    <a href="#" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; display: inline-block; box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4); transition: all 0.3s ease;">
-                        Verify Email Address
-                    </a>
-                </div>
-                
-                <div style="background: #f7fafc; border-radius: 15px; padding: 25px; margin: 30px 0; border-left: 4px solid #667eea;">
-                    <p style="color: #4a5568; margin: 0; font-size: 15px; line-height: 1.6;">
-                        <strong style="color: #2d3748;">Security tip:</strong> We will never ask for your verification code via phone or email. If you didn't request this code, please ignore this email.
-                    </p>
-                </div>
-            </div>
-            
-            <!-- Footer -->
-            <div style="background: #f8fafc; padding: 40px; text-align: center; border-top: 1px solid #e2e8f0;">
-                <div style="margin-bottom: 20px;">
-                    <a href="#" style="color: #667eea; text-decoration: none; margin: 0 15px; font-size: 14px; font-weight: 500;">Help Center</a>
-                    <a href="#" style="color: #667eea; text-decoration: none; margin: 0 15px; font-size: 14px; font-weight: 500;">Contact Support</a>
-                    <a href="#" style="color: #667eea; text-decoration: none; margin: 0 15px; font-size: 14px; font-weight: 500;">Privacy Policy</a>
-                </div>
-                <p style="color: #718096; margin: 0; font-size: 14px;">
-                    © 2025 SPYNE. All rights reserved.
-                </p>
-                <p style="color: #a0aec0; margin: 8px 0 0 0; font-size: 12px;">
-                    This email was sent to verify your account. If you have any questions, contact us at support@spyne.com
-                </p>
-            </div>
-            
-        </div>
-    </body>
-    </html>
+  const digits = otp.toString().split('').map(d =>
+    `<td class="otp-cell" align="center" valign="middle"
+         style="width:52px;height:64px;border:2px solid #E2E8F0;border-radius:10px;font-size:30px;font-weight:700;color:#0F172A;font-family:'Courier New',Courier,monospace;background:#FFFFFF;">${d}</td>
+     <td class="otp-gap" style="width:8px;"></td>`
+  ).join('');
+
+  const body = `
+    ${brandBar}
+    ${hero('#4F46E5', '🔐', 'Verify your email', 'One quick step — then you\'re all set')}
+
+    <!-- content -->
+    <tr>
+      <td class="body-pad" style="padding:40px 40px 36px;">
+
+        <p style="margin:0 0 28px;font-size:16px;color:#475569;line-height:1.65;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+          Hi <strong style="color:#0F172A;">${name}</strong> — enter the code below to verify your email address and activate your SPYNE account.
+        </p>
+
+        <!-- OTP digits -->
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:28px;">
+          <tr>
+            <td align="center" style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:32px 20px;">
+              <p style="margin:0 0 20px;font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:2px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">Verification Code</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+                <tr>${digits}</tr>
+              </table>
+              <p style="margin:20px 0 0;font-size:12px;color:#94A3B8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+                Expires in <strong style="color:#64748B;">10 minutes</strong>
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        ${callout('#FFFBEB', '#F59E0B', '#92400E', '<strong>Security notice:</strong> SPYNE will never ask for this code over the phone or via email. If you didn\'t create an account, you can safely ignore this message.')}
+
+        <p style="margin:0;font-size:13px;color:#94A3B8;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+          Having trouble? Reply to this email or contact <a href="mailto:support@spyne.com" style="color:#4F46E5;text-decoration:none;font-weight:500;">support@spyne.com</a>
+        </p>
+
+      </td>
+    </tr>
+
+    ${footer(`<a href="#" class="fl" style="color:#4F46E5;text-decoration:none;font-weight:500;margin:0 10px;">Help Center</a>
+              <a href="#" class="fl" style="color:#4F46E5;text-decoration:none;font-weight:500;margin:0 10px;">Privacy Policy</a>
+              <a href="#" class="fl" style="color:#94A3B8;text-decoration:none;margin:0 10px;">Unsubscribe</a>`)}
   `;
+
+  return document('Verify Your Email – SPYNE', body);
 };
 
+// ─── 2. Booking Confirmation ──────────────────────────────────────────────────
+
 export const bookingConfirmationTemplate = (user, car, booking) => {
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+  const bookingId = `#${booking._id.toString().slice(-8).toUpperCase()}`;
+  const days = Math.ceil((new Date(booking.endDate) - new Date(booking.startDate)) / 86400000);
 
-  const formatTime = (date) => {
-    return new Date(date).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  const body = `
+    ${brandBar}
+    ${hero('#059669', '✅', 'Booking Confirmed!', 'Your rental is all set — see you on the road', bookingId)}
 
-  return `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Booking Confirmed - SPYNE</title>
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        </style>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px;">
-        <div style="max-width: 650px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);">
-            
-            <!-- Header -->
-            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px; text-align: center; position: relative;">
-                <div style="background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px); border-radius: 15px; padding: 30px; margin: 0 auto; max-width: 400px;">
-                    <div style="width: 80px; height: 80px; background: #ffffff; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);">
-                        <span style="font-size: 36px; color: #10b981;">✅</span>
-                    </div>
-                    <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 36px; font-weight: 700; letter-spacing: -1px;">
-                        Booking Confirmed!
-                    </h1>
-                    <p style="color: rgba(255, 255, 255, 0.9); margin: 0; font-size: 16px; font-weight: 500;">
-                        Your rental is all set
-                    </p>
-                </div>
-            </div>
-            
-            <!-- Content -->
-            <div style="padding: 50px 40px;">
-                <div style="text-align: center; margin-bottom: 40px;">
-                    <h2 style="color: #1a202c; margin: 0 0 16px 0; font-size: 28px; font-weight: 700;">
-                        Hi ${user.fname}! 🎉
-                    </h2>
-                    <p style="color: #718096; margin: 0; font-size: 18px; line-height: 1.6;">
-                        We're thrilled to confirm your booking. Get ready for an amazing driving experience!
-                    </p>
-                </div>
-                
-                <!-- Booking Details Card -->
-                <div style="background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); border-radius: 20px; padding: 40px 35px; margin: 40px 0; border: 1px solid #e2e8f0;">
-                    <div style="text-align: center; margin-bottom: 30px;">
-                        <h3 style="color: #2d3748; margin: 0 0 8px 0; font-size: 24px; font-weight: 700;">
-                            ${car.title}
-                        </h3>
-                        <div style="background: #667eea; color: #ffffff; padding: 8px 20px; border-radius: 25px; display: inline-block; font-size: 14px; font-weight: 600;">
-                              Booking ID: #${booking._id.toString().slice(-8).toUpperCase()}
-                        </div>
-                    </div>
-                    
-                    <!-- Booking Timeline -->
-                    <div style="background: #ffffff; border-radius: 15px; padding: 30px; margin: 25px 0; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                            <div style="text-align: left; flex: 1;">
-                                <div style="color: #10b981; font-size: 14px; font-weight: 600; margin-bottom: 5px;">PICKUP</div>
-                                <div style="color: #1a202c; font-size: 18px; font-weight: 700; margin-bottom: 5px;">${formatDate(booking.startDate)}</div>
-                                <div style="color: #4a5568; font-size: 14px;">${formatTime(booking.startDate)}</div>
-                            </div>
-                            <div style="flex: 0 0 40px; text-align: center;">
-                                <div style="width: 40px; height: 2px; background: linear-gradient(to right, #10b981, #667eea);"></div>
-                            </div>
-                            <div style="text-align: right; flex: 1;">
-                                <div style="color: #dc2626; font-size: 14px; font-weight: 600; margin-bottom: 5px;">RETURN</div>
-                                <div style="color: #1a202c; font-size: 18px; font-weight: 700; margin-bottom: 5px;">${formatDate(booking.endDate)}</div>
-                                <div style="color: #4a5568; font-size: 14px;">${formatTime(booking.endDate)}</div>
-                            </div>
-                        </div>
-                        
-                        <div style="border-top: 1px solid #e2e8f0; padding-top: 20px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                                <div>
-                                    <div style="color: #4a5568; font-size: 14px; margin-bottom: 5px;">📍 Pickup Location</div>
-                                    <div style="color: #1a202c; font-size: 16px; font-weight: 600;">${booking.pickupLocation}</div>
-                                </div>
-                            </div>
-                            <div style="display: flex; justify-content: space-between;">
-                                <div>
-                                    <div style="color: #4a5568; font-size: 14px; margin-bottom: 5px;">📍 Drop-off Location</div>
-                                    <div style="color: #1a202c; font-size: 16px; font-weight: 600;">${booking.dropoffLocation}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Price Breakdown -->
-                    <div style="background: #ffffff; border-radius: 15px; padding: 30px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);">
-                        <h4 style="color: #1a202c; margin: 0 0 20px 0; font-size: 18px; font-weight: 700; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">
-                            💰 Payment Summary
-                        </h4>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                            <span style="color: #4a5568; font-size: 16px;">Rental Total</span>
-                            <span style="color: #1a202c; font-size: 16px; font-weight: 600;">$${booking.price}</span>
-                        </div>
-                        <div style="border-top: 2px solid #e2e8f0; padding-top: 15px; margin-top: 15px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="color: #1a202c; font-size: 20px; font-weight: 700;">Total Paid</span>
-                                <span style="color: #10b981; font-size: 24px; font-weight: 800;">$${booking.price}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Action Buttons -->
-                <div style="text-align: center; margin: 40px 0;">
-                    <a href="#" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 50px; font-size: 16px; font-weight: 600; display: inline-block; margin: 0 10px 15px 10px; box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);">
-                        View Booking Details
-                    </a>
-                    <a href="#" style="background: #ffffff; color: #667eea; text-decoration: none; padding: 16px 32px; border-radius: 50px; font-size: 16px; font-weight: 600; display: inline-block; margin: 0 10px 15px 10px; border: 2px solid #667eea;">
-                        Contact Support
-                    </a>
-                </div>
-                
-                <!-- Important Info -->
-                <div style="background: #fef3c7; border-radius: 15px; padding: 25px; margin: 30px 0; border-left: 4px solid #f59e0b;">
-                    <h4 style="color: #92400e; margin: 0 0 15px 0; font-size: 16px; font-weight: 700;">
-                        📋 Important Reminders
-                    </h4>
-                    <ul style="color: #92400e; margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6;">
-                        <li>Bring a valid driver's license and credit card</li>
-                        <li>Arrive 15 minutes early for pickup</li>
-                        <li>Vehicle inspection will be conducted before and after rental</li>
-                        <li>Return with the same fuel level as pickup</li>
-                    </ul>
-                </div>
-                
-                <div style="background: #f0f9ff; border-radius: 15px; padding: 25px; margin: 30px 0; border-left: 4px solid #0ea5e9;">
-                    <p style="color: #0c4a6e; margin: 0; font-size: 15px; line-height: 1.6;">
-                        <strong style="color: #075985;">Need help?</strong> Our customer support team is available 24/7 to assist you. Contact us at support@spyne.com or call +1 (555) 123-4567.
-                    </p>
-                </div>
-            </div>
-            
-            <!-- Footer -->
-            <div style="background: #f8fafc; padding: 40px; text-align: center; border-top: 1px solid #e2e8f0;">
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: #1a202c; margin: 0 0 15px 0; font-size: 18px; font-weight: 700;">
-                        SPYNE
-                    </h4>
-                    <p style="color: #718096; margin: 0 0 20px 0; font-size: 14px;">
-                        Premium car rentals for your every journey
-                    </p>
-                </div>
-                <div style="margin-bottom: 20px;">
-                    <a href="#" style="color: #667eea; text-decoration: none; margin: 0 15px; font-size: 14px; font-weight: 500;">Manage Booking</a>
-                    <a href="#" style="color: #667eea; text-decoration: none; margin: 0 15px; font-size: 14px; font-weight: 500;">Help Center</a>
-                    <a href="#" style="color: #667eea; text-decoration: none; margin: 0 15px; font-size: 14px; font-weight: 500;">Contact Support</a>
-                </div>
-                <p style="color: #718096; margin: 0; font-size: 14px;">
-                    © 2025 SPYNE. All rights reserved.
-                </p>
-                <p style="color: #a0aec0; margin: 8px 0 0 0; font-size: 12px;">
-                    This email was sent regarding your booking. If you have any questions, contact us at support@spyne.com
-                </p>
-            </div>
-            
-        </div>
-    </body>
-    </html>
+    <tr>
+      <td class="body-pad" style="padding:40px 40px 36px;">
+
+        <p style="margin:0 0 28px;font-size:16px;color:#475569;line-height:1.65;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+          Hi <strong style="color:#0F172A;">${user.fname}</strong> — your booking for the <strong style="color:#0F172A;">${car.title}</strong> is confirmed. Here's everything you need for your trip.
+        </p>
+
+        <!-- Ticket stub: pick-up / return -->
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+               style="border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;margin-bottom:24px;">
+          <tr>
+            <td class="ticket-l" valign="top" width="50%"
+                style="padding:20px 24px;border-right:1px dashed #CBD5E1;background:#FFFFFF;">
+              <p style="margin:0 0 6px;font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:1.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">Pick-Up</p>
+              <p style="margin:0 0 2px;font-size:26px;font-weight:700;color:#0F172A;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${fmtShort(booking.startDate)}</p>
+              <p style="margin:0 0 10px;font-size:13px;color:#94A3B8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${fmtYear(booking.startDate)}</p>
+              <p style="margin:0;font-size:13px;font-weight:500;color:#475569;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${booking.pickupLocation}</p>
+            </td>
+            <td class="ticket-r" valign="top" width="50%"
+                style="padding:20px 24px;background:#FFFFFF;">
+              <p style="margin:0 0 6px;font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:1.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">Return</p>
+              <p style="margin:0 0 2px;font-size:26px;font-weight:700;color:#0F172A;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${fmtShort(booking.endDate)}</p>
+              <p style="margin:0 0 10px;font-size:13px;color:#94A3B8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${fmtYear(booking.endDate)}</p>
+              <p style="margin:0;font-size:13px;font-weight:500;color:#475569;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${booking.dropoffLocation}</p>
+            </td>
+          </tr>
+          <!-- Duration bar -->
+          <tr>
+            <td colspan="2" align="center"
+                style="background:#F8FAFC;border-top:1px solid #E2E8F0;padding:10px 20px;">
+              <span style="font-size:12px;font-weight:600;color:#64748B;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+                ${days} day${days !== 1 ? 's' : ''} rental
+              </span>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Booking details -->
+        ${card('Booking Details',
+          row('Vehicle', `${car.title} &mdash; ${car.company}`) +
+          row('Booking ID', `<span style="font-family:'Courier New',Courier,monospace;font-size:13px;color:#4F46E5;">${bookingId}</span>`) +
+          row('Status', '<span style="display:inline-block;padding:3px 10px;border-radius:12px;background:#DCFCE7;color:#15803D;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;">Confirmed</span>') +
+          row('Total Paid', `<span style="font-size:18px;font-weight:700;color:#059669;">$${booking.price}</span>`, true)
+        )}
+
+        <!-- Reminders -->
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
+          <tr>
+            <td style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:18px 20px;">
+              <p style="margin:0 0 10px;font-size:12px;font-weight:700;color:#92400E;text-transform:uppercase;letter-spacing:0.8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">Before You Go</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                ${['Bring a valid driver\'s licence and a credit card',
+                   'Arrive 15 minutes before your scheduled pick-up',
+                   'A vehicle inspection is conducted at pick-up and return',
+                   'Return with the same fuel level as at pick-up'].map(tip => `
+                <tr>
+                  <td valign="top" style="padding:3px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td valign="top" style="padding-right:8px;font-size:13px;color:#92400E;line-height:1.5;">→</td>
+                        <td style="font-size:13px;color:#92400E;line-height:1.5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${tip}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>`).join('')}
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        ${ctaButton('View Booking Details', '#059669')}
+
+        <p style="margin:24px 0 0;font-size:13px;color:#94A3B8;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+          Questions? <a href="mailto:support@spyne.com" style="color:#4F46E5;text-decoration:none;font-weight:500;">support@spyne.com</a> · Available 24 / 7
+        </p>
+
+      </td>
+    </tr>
+
+    ${footer(`<a href="#" class="fl" style="color:#4F46E5;text-decoration:none;font-weight:500;margin:0 10px;">Manage Booking</a>
+              <a href="#" class="fl" style="color:#4F46E5;text-decoration:none;font-weight:500;margin:0 10px;">Help Center</a>
+              <a href="#" class="fl" style="color:#4F46E5;text-decoration:none;font-weight:500;margin:0 10px;">Contact Support</a>`)}
   `;
+
+  return document('Booking Confirmed – SPYNE', body);
+};
+
+// ─── 3. Booking Cancellation ──────────────────────────────────────────────────
+
+export const bookingCancellationTemplate = (user, car, booking) => {
+  const bookingId = `#${booking._id.toString().slice(-8).toUpperCase()}`;
+
+  const body = `
+    ${brandBar}
+    ${hero('#DC2626', '✕', 'Booking Cancelled', 'Your reservation has been removed', bookingId)}
+
+    <tr>
+      <td class="body-pad" style="padding:40px 40px 36px;">
+
+        <p style="margin:0 0 28px;font-size:16px;color:#475569;line-height:1.65;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+          Hi <strong style="color:#0F172A;">${user.fname}</strong> — your booking for the <strong style="color:#0F172A;">${car.title}</strong> has been cancelled. No further action is needed on your part.
+        </p>
+
+        <!-- Cancelled booking card -->
+        ${card('Cancelled Reservation',
+          row('Vehicle', `${car.title} &mdash; ${car.company}`) +
+          row('Was Scheduled', `${fmtFull(booking.startDate)} &rarr; ${fmtFull(booking.endDate)}`) +
+          row('Booking ID', `<span style="font-family:'Courier New',Courier,monospace;font-size:13px;color:#DC2626;">${bookingId}</span>`) +
+          row('Status', '<span style="display:inline-block;padding:3px 10px;border-radius:12px;background:#FEE2E2;color:#991B1B;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;">Cancelled</span>', true)
+        )}
+
+        ${callout('#EFF6FF', '#3B82F6', '#1E40AF', '<strong>Looking for another car?</strong> Browse our full fleet and find something that works for your schedule. We\'d love to have you back on the road.')}
+
+        ${ctaButton('Browse Available Cars', '#DC2626')}
+
+        <p style="margin:24px 0 0;font-size:13px;color:#94A3B8;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+          Questions about this cancellation? <a href="mailto:support@spyne.com" style="color:#4F46E5;text-decoration:none;font-weight:500;">Contact us</a>
+        </p>
+
+      </td>
+    </tr>
+
+    ${footer(`<a href="#" class="fl" style="color:#4F46E5;text-decoration:none;font-weight:500;margin:0 10px;">Browse Cars</a>
+              <a href="#" class="fl" style="color:#4F46E5;text-decoration:none;font-weight:500;margin:0 10px;">Help Center</a>
+              <a href="#" class="fl" style="color:#94A3B8;text-decoration:none;margin:0 10px;">Unsubscribe</a>`)}
+  `;
+
+  return document('Booking Cancelled – SPYNE', body);
+};
+
+// ─── 4. Booking Completion ────────────────────────────────────────────────────
+
+export const bookingCompletionTemplate = (user, car, booking) => {
+  const bookingId = `#${booking._id.toString().slice(-8).toUpperCase()}`;
+  const days = Math.ceil((new Date(booking.endDate) - new Date(booking.startDate)) / 86400000);
+
+  const body = `
+    ${brandBar}
+    ${hero('#7C3AED', '🏁', 'Rental Complete!', `Thanks for choosing SPYNE, ${user.fname}`)}
+
+    <tr>
+      <td class="body-pad" style="padding:40px 40px 36px;">
+
+        <p style="margin:0 0 28px;font-size:16px;color:#475569;line-height:1.65;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+          Your rental of the <strong style="color:#0F172A;">${car.title}</strong> is now complete. We hope you enjoyed the ride. Here's a summary of your trip.
+        </p>
+
+        <!-- Ticket stub: pick-up / return -->
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+               style="border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;margin-bottom:24px;">
+          <tr>
+            <td class="ticket-l" valign="top" width="50%"
+                style="padding:20px 24px;border-right:1px dashed #CBD5E1;background:#FFFFFF;">
+              <p style="margin:0 0 6px;font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:1.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">Picked Up</p>
+              <p style="margin:0 0 2px;font-size:26px;font-weight:700;color:#0F172A;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${fmtShort(booking.startDate)}</p>
+              <p style="margin:0;font-size:13px;color:#94A3B8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${fmtYear(booking.startDate)}</p>
+            </td>
+            <td class="ticket-r" valign="top" width="50%"
+                style="padding:20px 24px;background:#FFFFFF;">
+              <p style="margin:0 0 6px;font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:1.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">Returned</p>
+              <p style="margin:0 0 2px;font-size:26px;font-weight:700;color:#0F172A;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${fmtShort(booking.endDate)}</p>
+              <p style="margin:0;font-size:13px;color:#94A3B8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${fmtYear(booking.endDate)}</p>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2" align="center"
+                style="background:#F8FAFC;border-top:1px solid #E2E8F0;padding:10px 20px;">
+              <span style="font-size:12px;font-weight:600;color:#64748B;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+                ${days} day${days !== 1 ? 's' : ''} · ${car.title}
+              </span>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Receipt summary -->
+        ${card('Receipt',
+          row('Vehicle', `${car.title} &mdash; ${car.company}`) +
+          row('Booking ID', `<span style="font-family:'Courier New',Courier,monospace;font-size:13px;color:#7C3AED;">${bookingId}</span>`) +
+          row('Duration', `${days} day${days !== 1 ? 's' : ''}`) +
+          row('Status', '<span style="display:inline-block;padding:3px 10px;border-radius:12px;background:#EDE9FE;color:#5B21B6;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;">Completed</span>') +
+          row('Total Charged', `<span style="font-size:18px;font-weight:700;color:#059669;">$${booking.price}</span>`, true)
+        )}
+
+        ${callout('#F0FDF4', '#22C55E', '#15803D', '<strong>Enjoyed your ride?</strong> We\'d love to hear about your experience. Your feedback helps us serve you better on your next trip.')}
+
+        ${ctaButton('Book Your Next Car', '#7C3AED')}
+
+        <p style="margin:24px 0 0;font-size:13px;color:#94A3B8;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+          Concerns about your rental? <a href="mailto:support@spyne.com" style="color:#4F46E5;text-decoration:none;font-weight:500;">support@spyne.com</a>
+        </p>
+
+      </td>
+    </tr>
+
+    ${footer(`<a href="#" class="fl" style="color:#4F46E5;text-decoration:none;font-weight:500;margin:0 10px;">Book Again</a>
+              <a href="#" class="fl" style="color:#4F46E5;text-decoration:none;font-weight:500;margin:0 10px;">Help Center</a>
+              <a href="#" class="fl" style="color:#94A3B8;text-decoration:none;margin:0 10px;">Unsubscribe</a>`)}
+  `;
+
+  return document('Rental Complete – SPYNE', body);
 };

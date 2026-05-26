@@ -1,8 +1,11 @@
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 import { otpVerificationTemplate } from "../utils/emailTemplates.js";
 import { sendEmail } from "../config/email.js";
 import { MESSAGES } from "../constants/messages.js";
+import { generateToken, generateRefreshToken, hashToken, REFRESH_TOKEN_TTL_MS } from "../utils/jwt.js";
+import redis from "../config/redis.js";
 
 export const registerUser = async (userData) => {
   const { email, password, fname, lname, phonenumber } = userData;
@@ -91,4 +94,52 @@ export const resendOtp = async ({ email }) => {
 
   const { password, otp: _, otpExpiry: __, ...safeUser } = user.toObject();
   return safeUser;
+};
+
+export const refreshTokenService = async (rawRefreshToken) => {
+  if (!rawRefreshToken) {
+    throw new Error(MESSAGES.REFRESH_TOKEN_REQUIRED);
+  }
+
+  const hashed = hashToken(rawRefreshToken);
+  const user = await User.findOne({
+    refreshToken: hashed,
+    refreshTokenExpiry: { $gt: new Date() },
+  });
+
+  if (!user) {
+    throw new Error(MESSAGES.INVALID_REFRESH_TOKEN);
+  }
+
+  // Rotate: issue new access token and a new refresh token
+  const newAccessToken = generateToken(user);
+  const newRawRefreshToken = generateRefreshToken();
+
+  user.refreshToken = hashToken(newRawRefreshToken);
+  user.refreshTokenExpiry = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
+  await user.save();
+
+  return { accessToken: newAccessToken, refreshToken: newRawRefreshToken };
+};
+
+export const logoutService = async (accessToken, rawRefreshToken, userId) => {
+  // Blacklist the access token in Redis for its remaining lifetime
+  try {
+    const decoded = jwt.decode(accessToken);
+    if (decoded?.jti && decoded?.exp) {
+      const ttl = decoded.exp - Math.floor(Date.now() / 1000);
+      if (ttl > 0) {
+        await redis.set(`bl:${decoded.jti}`, '1', 'EX', ttl);
+      }
+    }
+  } catch (_) {}
+
+  // Invalidate the stored refresh token
+  const update = { $unset: { refreshToken: 1, refreshTokenExpiry: 1 } };
+  if (rawRefreshToken) {
+    const hashed = hashToken(rawRefreshToken);
+    await User.updateOne({ _id: userId, refreshToken: hashed }, update);
+  } else {
+    await User.updateOne({ _id: userId }, update);
+  }
 };
