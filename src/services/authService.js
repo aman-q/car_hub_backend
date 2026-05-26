@@ -143,3 +143,44 @@ export const logoutService = async (accessToken, rawRefreshToken, userId) => {
     await User.updateOne({ _id: userId }, update);
   }
 };
+export const forgotPasswordService = async ({ email }) => {
+  const user = await User.findOne({ email });
+  if (!user) throw new Error(MESSAGES.USER_NOT_FOUND);
+
+  const otp = Math.floor(100000 + Math.random() * 900000);
+
+  user.otp = otp;
+  user.otpExpiry = Date.now() + 10 * 60 * 1000;
+  await user.save();
+
+  const emailBody = otpVerificationTemplate(user.fname, otp);
+  await sendEmail("Reset Your Password - OTP", user.email, emailBody);
+
+  return { email: user.email };
+};
+
+export const resetPasswordService = async ({ email, otp, newPassword }) => {
+  const user = await User.findOne({ email });
+  if (!user) throw new Error(MESSAGES.USER_NOT_FOUND);
+
+  if (!user.otp || !user.otpExpiry || user.otp !== Number(otp)) {
+    throw new Error(MESSAGES.INVALID_OTP);
+  }
+
+  if (user.otpExpiry < Date.now()) {
+    throw new Error(MESSAGES.OTP_EXPIRED);
+  }
+
+  const isSame = await bcrypt.compare(newPassword, user.password);
+  if (isSame) throw new Error(MESSAGES.SAME_PASSWORD_ERROR);
+
+  user.password = await bcrypt.hash(newPassword, 10);
+  user.otp = null;
+  user.otpExpiry = null;
+  user.refreshToken = null;
+  user.refreshTokenExpiry = null;
+
+  await user.save();
+
+  return { email: user.email };
+};

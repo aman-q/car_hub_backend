@@ -55,6 +55,10 @@ export const MESSAGES = {
     PROFILE_UPDATE_SUCCESS: "Profile updated successfully.",
     PHONE_ALREADY_IN_USE: "This phone number is already in use.",
     NO_BOOKINGS_YET: "You have no bookings yet. Explore our cars to get started!",
+    PASSWORD_RESET_OTP_SENT: "Password reset OTP sent to your email.",
+    PASSWORD_RESET_SUCCESS: "Password reset successfully.",
+    INVALID_OR_EXPIRED_OTP: "Invalid or expired OTP.",
+    SAME_PASSWORD_ERROR: "New password must differ from the current password.",
 
     // Car ownership
     UNAUTHORIZED_CAR_ACTION: "You are not authorized to perform this action on this car.",

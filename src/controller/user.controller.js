@@ -1,7 +1,7 @@
 import User from '../models/user.model.js';
 import bcrypt from 'bcrypt';
 import { generateToken, generateRefreshToken, hashToken, REFRESH_TOKEN_TTL_MS } from '../utils/jwt.js';
-import { registerUser, verifyUserOtp, resendOtp, refreshTokenService, logoutService } from '../services/authService.js';
+import { registerUser, verifyUserOtp, resendOtp, refreshTokenService, logoutService ,forgotPasswordService, resetPasswordService } from '../services/authService.js';
 import { getProfileService, updateProfileService } from '../services/userService.js';
 import { getProfileBookingsService } from '../services/bookingService.js';
 import { MESSAGES } from "../constants/messages.js";
@@ -148,5 +148,34 @@ export const logoutController = async (req, res) => {
     return sendSuccess(res, MESSAGES.LOGOUT_SUCCESS, {}, STATUS_CODES.OK);
   } catch (error) {
     return sendError(res, MESSAGES.SERVER_ERROR, null, STATUS_CODES.SERVER_ERROR);
+  }
+};
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const result = await forgotPasswordService(req.body);
+    return sendSuccess(res, MESSAGES.PASSWORD_RESET_OTP_SENT, result, STATUS_CODES.OK);
+  } catch (error) {
+    const status = error.message === MESSAGES.USER_NOT_FOUND
+      ? STATUS_CODES.BAD_REQUEST
+      : STATUS_CODES.SERVER_ERROR;
+    return sendError(res, error.message, null, status);
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const result = await resetPasswordService(req.body);
+    return sendSuccess(res, MESSAGES.PASSWORD_RESET_SUCCESS, result, STATUS_CODES.OK);
+  } catch (error) {
+    const knownErrors = [
+      MESSAGES.USER_NOT_FOUND,
+      MESSAGES.INVALID_OR_EXPIRED_OTP,
+      MESSAGES.SAME_PASSWORD_ERROR,
+    ];
+    const status = knownErrors.includes(error.message)
+      ? STATUS_CODES.BAD_REQUEST
+      : STATUS_CODES.SERVER_ERROR;
+    return sendError(res, error.message, null, status);
   }
 };

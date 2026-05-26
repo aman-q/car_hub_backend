@@ -2,7 +2,7 @@ import express from 'express';
 import {
   login, register, verifyOtp, resendOtpController,
   refreshTokenController, logoutController,
-  getProfile, updateProfile, getProfileBookings,
+  getProfile, updateProfile, getProfileBookings, forgotPassword, resetPassword
 } from '../controller/user.controller.js';
 import { otpRateLimiter, loginRateLimiter, registerRateLimiter } from "../middleware/rateLimiter.js";
 import authMiddleware from '../middleware/authenticateToken.js';
@@ -16,6 +16,9 @@ userRouter.post("/verify-otp", verifyOtp);
 userRouter.post("/resend-otp", otpRateLimiter, resendOtpController);
 userRouter.post("/refresh-token", refreshTokenController);
 userRouter.post("/logout", authMiddleware, logoutController);
+userRouter.post("/forgot-password", otpRateLimiter, forgotPassword);
+userRouter.post("/reset-password", resetPassword);
+
 
 // Profile — /profile/me/bookings must be registered before /profile/me to avoid :wildcard conflict
 userRouter.get("/profile/me/bookings", authMiddleware, getProfileBookings);
