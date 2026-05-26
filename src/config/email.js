@@ -7,12 +7,11 @@ dotenv.config();
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
   port: Number(process.env.EMAIL_PORT),
-  service: process.env.EMAIL_SERVICE, // Use EMAIL_SERVICE for service provider
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD,
   },
-  secure: false, // Upgrade to true if using port 465 and SSL
+  secure: process.env.EMAIL_PORT === "465", // true for 465 (SSL), false for 587 (TLS)
   requireTLS: true,
   tls: {
     rejectUnauthorized: false,
@@ -22,7 +21,7 @@ const transporter = nodemailer.createTransport({
 export const sendEmail = async (subject, recipientEmail, body) => {
   try {
     const mailOptions = {
-      from: process.env.EMAIL_USER, // Use EMAIL_USER as sender address
+      from: process.env.EMAIL_USER,
       to: recipientEmail,
       subject,
       html: body,
@@ -36,3 +35,4 @@ export const sendEmail = async (subject, recipientEmail, body) => {
     throw error;
   }
 };
+
