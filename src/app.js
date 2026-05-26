@@ -4,6 +4,7 @@ import cors from "cors";
 import connectDb from "./config/db.js";
 import { globalRateLimiter } from "./middleware/rateLimiter.js";
 import indexRouter from "./router/index.js";
+import { sendEmail } from './config/email.js';
 // import { connectRabbitMQ } from './config/rabbitmq.js';
 
 const app = express();
@@ -30,8 +31,8 @@ app.get("/", (req, res) => {
 });
 app.get('/test-smtp', async (req, res) => {
   try {
-    await transporter.verify();
-    res.json({ status: 'SMTP OK' });
+    await sendEmail('SMTP Test', 'yourgmail@gmail.com', '<p>test</p>');
+    res.json({ status: 'Email sent OK' });
   } catch (err) {
     res.json({ error: err.message, code: err.code });
   }
