@@ -31,7 +31,7 @@ app.get("/", (req, res) => {
 });
 app.get('/test-smtp', async (req, res) => {
   try {
-    await sendEmail('SMTP Test', 'yourgmail@gmail.com', '<p>test</p>');
+    await sendEmail('SMTP Test', 'ass14jsr@gmail.com', '<p>test</p>');
     res.json({ status: 'Email sent OK' });
   } catch (err) {
     res.json({ error: err.message, code: err.code });
