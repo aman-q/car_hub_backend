@@ -45,7 +45,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export const sendEmail = async (subject, recipientEmail, body) => {
   try {
     const { data, error } = await resend.emails.send({
-      from: 'onboarding@resend.dev', // replace with your domain later
+      from: 'spyne_ai@anwesh2k24.info', // replace with your domain later
       to: recipientEmail,
       subject,
       html: body,
